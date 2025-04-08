@@ -1,0 +1,87 @@
+---
+- name: Deploy application
+  hosts: all
+  become: yes
+  vars:
+    app_name: "{{ app_name }}"
+    app_type: "{{ app_type }}"
+    node_version: "{{ node_version | default('18') }}"
+    server_name: "{{ server_name | default('_') }}"
+    
+  pre_tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        
+    - name: Install required packages
+      apt:
+        name:
+          - nginx
+          - git
+          - python3-pip
+        state: present
+        
+  roles:
+    # Load the appropriate role based on app_type
+    - role: "{{ app_type }}"
+      when: app_type == "nextjs"
+      
+    - role: "express"
+      when: app_type == "express"
+      
+    - role: "react"
+      when: app_type == "react"
+      
+    - role: "flask"
+      when: app_type == "flask"
+      
+    - role: "django"
+      when: app_type == "django"
+      
+  tasks:
+    - name: Set up Git repository for application
+      git:
+        repo: "https://github.com/{{ lookup('env', 'GITHUB_OWNER') }}/{{ app_name }}.git"
+        dest: "/var/www/{{ app_name }}"
+        version: main
+      become: yes
+      become_user: app
+        
+    - name: Install application dependencies
+      shell: npm ci
+      args:
+        chdir: "/var/www/{{ app_name }}"
+      become: yes
+      become_user: app
+      when: app_type in ["nextjs", "react", "express"]
+        
+    - name: Build application
+      shell: npm run build
+      args:
+        chdir: "/var/www/{{ app_name }}"
+      become: yes
+      become_user: app
+      when: app_type in ["nextjs", "react"]
+        
+    - name: Set up PM2 to run the application
+      shell: |
+        pm2 delete {{ app_name }} || true
+        pm2 start npm --name "{{ app_name }}" -- start
+        pm2 save
+        pm2 startup
+      args:
+        chdir: "/var/www/{{ app_name }}"
+      become: yes
+      become_user: app
+      when: app_type in ["nextjs", "express"]
+  
+  post_tasks:
+    - name: Ensure nginx is running
+      service:
+        name: nginx
+        state: started
+        enabled: yes
+        
+    - name: Show deployment information
+      debug:
+        msg: "Application deployed successfully. Visit http://{{ server_name }}"
