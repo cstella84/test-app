@@ -115,15 +115,34 @@ resource "aws_instance" "app_server" {
     Application = var.app_name
     AppType     = var.app_type
   }
+
+  connection {
+    type        = "ssh"
+    user        = "ubuntu"
+    private_key = var.ssh_private_key
+    host        = self.public_ip
+  }
   
   # This provisioner will execute the appropriate Ansible playbook
-  provisioner "local-exec" {
-    command = <<-EOT
-      ansible-playbook \
-        -i '${self.public_ip},' \
-        -e "app_name=${var.app_name} app_type=${var.app_type} node_version=18 server_name=${self.public_ip}" \
-        ../ansible/deploy.yml
-    EOT
+  provisioner "remote-exec" {
+    inline = [ 
+      "sudo apt-get update && sudo apt-get upgrade -y",
+      "sudo apt-get install -y ansible",
+      "mkdir -p ~/ansible-playbooks",
+     ]
+  }
+
+  # Copy Ansible playbooks to the instance
+  provisioner "file" {
+    source      = "../ansible/"
+    destination = "~/ansible-playbooks"
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "cd ~/ansible-playbooks",
+      "ansible-playbook -i 'localhost,' -c local -e \"app_name=test-app app_type=nextjs node_version=18 server_name=${self.public_dns}\" deploy.yml"
+    ]
   }
 }
 
