@@ -142,7 +142,7 @@ resource "aws_instance" "app_server" {
   provisioner "remote-exec" {
     inline = [
       "cd /home/ubuntu/ansible-playbooks",
-      "ansible-playbook -i 'localhost,' -c local -e \"app_name=test-app app_type=nextjs node_version=18 server_name=${self.public_dns}\" deploy.yml"
+      "sudo ansible-playbook -i 'localhost,' -c local -e \"app_name=test-app app_type=nextjs node_version=18 server_name=${self.public_dns}\" deploy.yml"
     ]
   }
 }
