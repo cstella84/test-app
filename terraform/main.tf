@@ -103,6 +103,7 @@ resource "aws_instance" "app_server" {
   subnet_id              = module.vpc.public_subnets[0]
   vpc_security_group_ids = [aws_security_group.app_sg.id]
   key_name               = var.key_name
+  associate_public_ip_address = true
   
   root_block_device {
     volume_size = 20
@@ -150,6 +151,7 @@ resource "aws_instance" "app_server" {
 resource "aws_eip" "app_eip" {
   instance = aws_instance.app_server.id
   domain   = "vpc"
+  depends_on = [ aws_instance.app_server ]
   
   tags = {
     Name        = "${var.app_name}-eip"
