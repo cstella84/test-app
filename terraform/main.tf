@@ -136,12 +136,12 @@ resource "aws_instance" "app_server" {
   # Copy Ansible playbooks to the instance
   provisioner "file" {
     source      = "../ansible/"
-    destination = "~/ansible-playbooks"
+    destination = "/home/ubuntu/ansible-playbooks"
   }
 
   provisioner "remote-exec" {
     inline = [
-      "cd ~/ansible-playbooks",
+      "cd /home/ubuntu/ansible-playbooks",
       "ansible-playbook -i 'localhost,' -c local -e \"app_name=test-app app_type=nextjs node_version=18 server_name=${self.public_dns}\" deploy.yml"
     ]
   }
