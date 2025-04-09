@@ -1,0 +1,60 @@
+---
+# Role tasks for setting up Next.js runtime environment
+
+- name: Install Node.js repository
+  shell: |
+    curl -fsSL https://deb.nodesource.com/setup_{{ node_version | default('18') }}.x | bash -
+  args:
+    warn: false
+
+- name: Install Node.js
+  apt:
+    name: nodejs
+    state: present
+    update_cache: yes
+
+- name: Install PM2 globally
+  npm:
+    name: pm2
+    global: yes
+    state: present
+
+- name: Create application directory
+  file:
+    path: "/var/www/{{ app_name }}"
+    state: directory
+    owner: app
+    group: www-data
+    mode: '0755'
+
+- name: Create logs directory
+  file:
+    path: "/var/log/{{ app_name }}"
+    state: directory
+    owner: app
+    group: www-data
+    mode: '0755'
+
+- name: Configure Nginx for Next.js
+  template:
+    src: nginx.conf.j2
+    dest: "/etc/nginx/sites-available/{{ app_name }}"
+    owner: root
+    group: root
+    mode: '0644'
+  notify: restart nginx
+
+- name: Enable site in Nginx
+  file:
+    src: "/etc/nginx/sites-available/{{ app_name }}"
+    dest: "/etc/nginx/sites-enabled/{{ app_name }}"
+    state: link
+  notify: restart nginx
+
+- name: Create environment file template
+  template:
+    src: env.j2
+    dest: "/var/www/{{ app_name }}/.env.production"
+    owner: app
+    group: www-data
+    mode: '0640'

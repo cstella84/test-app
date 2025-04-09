@@ -1,0 +1,10 @@
+---
+- name: restart nginx
+  service:
+    name: nginx
+    state: restarted
+
+- name: reload pm2
+  shell: pm2 reload all
+  become: yes
+  become_user: app
